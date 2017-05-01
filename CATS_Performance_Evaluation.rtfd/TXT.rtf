@@ -1,0 +1,392 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1404\cocoasubrtf340
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fmodern\fcharset0 Courier;\f2\fmodern\fcharset0 Courier-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red38\green38\blue38;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs72 \cf0 Cats Cube
+\fs36 \
+\
+
+\b Query 1:
+\b0\fs48  
+\fs36 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 CREATE VIEW init (uid, vid, verdict) AS\
+  select    u.user_id as uid, v.video_id as vid, 0 as verdict\
+  from	    cats.user u, video v;\
+\
+\
+CREATE VIEW overallLikes (uid, vid, verdict) AS\
+  select    u.user_id as uid, l.video_id as vid, 1 as verdict\
+  from      cats.user u, likes l\
+  where	    l.user_id != u.user_id\
+\
+  union all\
+\
+  select    * from init;\
+\
+PREPARE  Overall_better (int) AS\
+\
+select   vid, sum (verdict) as rank\
+from     overallLikes o\
+where    o.uid = $1 and \
+	 not exists (select 1 from watch w where w.user_id = o.uid and w.video_id = o.vid)\
+group by vid\
+order by rank desc\
+limit    10;\
+\
+--EXECUTE Overall_better (13);\
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+Total query runtime: 305 msec.\
+0 rows retrieved.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-24 at 11.51.15 PM.png \width11380 \height10980
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 {{\NeXTGraphic Screen Shot 2017-02-24 at 11.52.09 PM.png \width11440 \height1560
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs36 \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 \
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f2\b\fs36 \cf2 \expnd0\expndtw0\kerning0
+Analysis
+\f0\b0 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 For this query, it is simply looking up the overall likes of vedio, and this query does no extensive querying or joining on a particular column.Therefore, we do not need to insert index in this query.
+\f1\fs26 \cf2 \expnd0\expndtw0\kerning0
+\
+\
+
+\f0\b\fs36 \cf0 \kerning1\expnd0\expndtw0 Query 2:
+\b0\fs48  
+\fs36 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 CREATE VIEW cats.friendLikes (uid, vid, verdict) AS\
+  select    u.user_id as uid, l.video_id as vid, 1 as verdict\
+  from      cats.user u, friend f, likes l\
+  where	    f.user_id = u.user_id and f.friend_id != u.user_id and --don't think of X as his own friend\
+	    l.user_id = f.friend_id\
+            \
+  union all\
+\
+  select    * from init;\
+\
+\
+PREPARE  Overall_better (int) AS\
+\
+select   vid, sum (verdict) as rank\
+from     friendLikes f\
+where    f.uid = $1 and \
+	 not exists (select 1 from watch w where w.user_id = f.uid and w.video_id = f.vid)\
+group by vid\
+order by rank desc\
+limit    10;\
+\
+--EXECUTE Overall_better (13);\
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+Total query runtime: 229 msec.\
+0 rows retrieved.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.00.43 AM.png \width12280 \height9800
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.03.15 AM.png \width12420 \height4020
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs36 \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs36 \cf0 \
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f2\b \cf2 \expnd0\expndtw0\kerning0
+Analysis
+\f0\b0 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 For this query, we can see that the query is doing an implicit join between the friend and like table on the friend.user_id column. Therefore, if we set an index to it, and it would be beneficial to do sequential search. \
+\
+CREATE INDEX friend_user_id_idx ON cats.friend USING btree (user_id)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\fs36 \cf2 Total query runtime: 223 msec.\
+0 rows retrieved.\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.14.28 AM.png \width11400 \height9860
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.15.38 AM.png \width11380 \height2560
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf2 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\b\fs36 \cf0 \kerning1\expnd0\expndtw0 Query 3:
+\b0\fs48  
+\fs36 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 CREATE VIEW cats.fof (user_id, fof_id) AS\
+  select distinct u.user_id, fof.friend_id as fof_id\
+  from   cats.user u, friend f, friend fof\
+  where	 f.user_id = u.user_id and f.friend_id != u.user_id and f.friend_id = fof.user_id and fof.friend_id != u.user_id and \
+	 not exists (select 1 from friend g where g.user_id = u.user_id and g.friend_id = fof.friend_id);\
+\
+  \
+CREATE VIEW cats.fofLikes (uid, vid, verdict) AS\
+\
+  select    u.user_id as uid, l.video_id as vid, 1 as verdict\
+  from      cats.user u, fof f, likes l\
+  where	    f.user_id = u.user_id and \
+  	    l.user_id = f.fof_id\
+\
+  union all\
+\
+  select * from friendLikes\
+\
+  union all\
+\
+  select * from init;\
+\
+PREPARE  Overall_better (int) AS\
+\
+select   vid, sum (verdict) as rank\
+from     fofLikes fof\
+where    fof.uid = $1 and \
+	 not exists (select 1 from watch w where w.user_id = fof.uid and w.video_id = fof.vid)\
+group by vid\
+order by rank desc\
+limit    10;\
+\
+--EXECUTE Overall_better (13);\
+\
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f2\b\fs36 \cf2 \expnd0\expndtw0\kerning0
+Analysis
+\f0\b0 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+\cf0 Similar with the query 2, it the same issue, and we should add the index of friend.user_id. \
+\
+CREATE INDEX friend_user_id_idx ON cats.friend USING btree (user_id)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 \
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+Total query runtime: 210 msec.\
+0 rows retrieved.
+\fs26 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf2 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.21.28 AM.png \width12100 \height10380
+}¬}\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf0 \
+{{\NeXTGraphic Screen Shot 2017-02-25 at 12.22.24 AM.png \width12060 \height9520
+}¬}\
+{{\NeXTGraphic Screen Shot 2017-02-25 at 12.23.06 AM.png \width12060 \height9040
+}¬}\
+{{\NeXTGraphic Screen Shot 2017-02-25 at 12.23.46 AM.png \width12040 \height1020
+}¬}\
+\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\b\fs36 \cf0 Query 4:
+\b0\fs48  
+\fs36 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 CREATE VIEW cats.mykindOfUser (user_id, other_id) AS\
+  select distinct ul.user_id, ol.user_id as other_id\
+  from   likes ul, likes ol\
+  where  ul.user_id != ol.user_id and\
+  	 ul.video_id = ol.video_id;\
+\
+CREATE VIEW cats.mykindLikes (uid, vid, verdict) AS\
+  select    u.user_id as uid, l.video_id as vid, 1 as verdict\
+  from      cats.user u, mykindOfUser m, likes l\
+  where	    m.user_id = u.user_id and\
+  	    l.user_id = m.other_id\
+\
+  union all\
+\
+  select   * from init;\
+\
+PREPARE  Overall_better (int) AS\
+\
+select   vid, sum (verdict) as rank\
+from     mykindLikes myk\
+where    myk.uid = $1 and \
+	 not exists (select 1 from watch w where w.user_id = myk.uid and w.video_id = myk.vid)\
+group by vid\
+order by rank desc\
+limit    10;\
+\
+--EXECUTE Overall_better (13);\
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+Total query runtime: 204 msec.\
+0 rows retrieved.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.39.26 AM.png \width12800 \height10340
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.40.07 AM.png \width12740 \height7520
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f2\b\fs36 \cf2 \expnd0\expndtw0\kerning0
+Analysis
+\f0\b0 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+\cf0 Because of the querying about on like.user_id, it might be beneficial to add an index on it.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\fs36 \cf2 CREATE INDEX like_user_id_idx ON cats.likes USING btree (user_id)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.49.00 AM.png \width13380 \height9940
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.49.54 AM.png \width13420 \height8540
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+
+\f0\fs26 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\b \cf0 \kerning1\expnd0\expndtw0 Query 5:
+\b0\fs48  
+\fs36 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs26 \cf0 CREATE VIEW cats.commonLikes (x,y,likeSame) AS\
+   select  l1.user_id as x, l2.user_id as y, 1 as likeSame\
+   from	   likes l1, likes l2\
+   where   l1.video_id = l2.video_id and \
+   	   l1.user_id != l2.user_id\
+\
+   union all\
+\
+   select  u1.user_id as x, u2.user_id as y, 0 as likeSame\
+   from	   users u1, users u2\
+   where   u1.user_id != u2.user_id;\
+\
+\
+CREATE VIEW cats.inner_product (x,y,prod) AS\
+--x, y:  users\
+--prod: the inner product of vectors v_x and v_y\
+\
+   select   x, y, sum (likeSame) as prod\
+   from     commonLikes\
+   group by x, y;\
+\
+CREATE VIEW cats.weightedMykindLikes (uid, vid, verdict) AS \
+select  u.user_id as uid, l.video_id as vid, log(1+i.prod) as verdict\
+from	users u, inner_product i, likes l\
+where   u.user_id = i.x and \
+	l.user_id = i.y;\
+\
+\
+\
+PREPARE  Overall_better (int) AS\
+\
+select   vid, sum (verdict) as rank\
+from     weightedMykindLikes wmyk\
+where    wmyk.uid = $1 and \
+	 not exists (select 1 from watch w where w.user_id = wmyk.uid and w.video_id = wmyk.vid)\
+group by vid\
+order by rank desc\
+limit    10;\
+\
+--EXECUTE Overall_better (13);\
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+Total query runtime: 176 msec.\
+0 rows retrieved.\
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\f2\b \cf2 Analysis
+\f0\b0 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+\cf0 For this query, it is similar with the query 4. Therefore we set up a index in like_user_id. \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\pardeftab720\sl360\partightenfactor0
+
+\fs36 \cf2 CREATE INDEX like_user_id_idx ON cats.likes USING btree (user_id)\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.56.47 AM.png \width10780 \height10980
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 {{\NeXTGraphic Screen Shot 2017-02-25 at 12.57.22 AM.png \width10780 \height7520
+}¬}\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs36 \cf2 \expnd0\expndtw0\kerning0
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \kerning1\expnd0\expndtw0 \
+I}
